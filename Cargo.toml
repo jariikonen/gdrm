@@ -1,0 +1,8 @@
+[package]
+name = "gdrm"
+version = "0.1.0"
+edition = "2024"
+description = "A game from the Game Development in Rust using Macroquad book."
+
+[dependencies]
+macroquad = "0.4.14"
