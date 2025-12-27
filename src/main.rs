@@ -1,53 +1,51 @@
 use macroquad::{prelude::*, rand::ChooseRandom};
 use std::fs;
 
+const MOVEMENT_SPEED: f32 = 200.0;
+const BACKGROUND_COLOR: Color = Color::from_hex(0x222244);
+const SQUARE_COLORS: [Color; 6] = [
+    RED,
+    GREEN,
+    BLUE,
+    YELLOW,
+    PURPLE,
+    ORANGE,
+];
+
+struct Shape {
+    size: f32,
+    speed: f32,
+    x: f32,
+    y: f32,
+    color: Color,
+    collided: bool,
+}
+
+impl Shape {
+    fn collides_with(&self, other: &Self) -> bool {
+        self.rect().overlaps(&other.rect())
+    }
+
+    fn rect(&self) -> Rect {
+        Rect {
+            x: self.x - self.size / 2.0,
+            y: self.y - self.size / 2.0,
+            w: self.size,
+            h: self.size,
+        }
+    }
+}
+
+enum GameState {
+    MainMenu,
+    Playing,
+    Paused,
+    GameOver,
+}
+
 #[macroquad::main("GDRM")]
 async fn main() {
-    const MOVEMENT_SPEED: f32 = 200.0;
-    const BACKGROUND_COLOR: Color = Color::from_hex(0x222244);
-
-    struct Shape {
-        size: f32,
-        speed: f32,
-        x: f32,
-        y: f32,
-        color: Color,
-        collided: bool,
-    }
-
-    impl Shape {
-        fn collides_with(&self, other: &Self) -> bool {
-            self.rect().overlaps(&other.rect())
-        }
-
-        fn rect(&self) -> Rect {
-            Rect {
-                x: self.x - self.size / 2.0,
-                y: self.y - self.size / 2.0,
-                w: self.size,
-                h: self.size,
-            }
-        }
-    }
-
-    let square_colors = [
-        RED,
-        GREEN,
-        BLUE,
-        YELLOW,
-        PURPLE,
-        ORANGE,
-    ];
-
-    enum GameState {
-        MainMenu,
-        Playing,
-        Paused,
-        GameOver,
-    }
-
     rand::srand(miniquad::date::now() as u64);
-
     let mut squares = vec![];
     let mut circle = Shape {
         size: 32.0,
@@ -58,9 +56,7 @@ async fn main() {
         collided: false
     };
     let mut bullets: Vec<Shape> = vec![];
-
     let mut game_state = GameState::MainMenu;
-
     let mut score: u32 = 0;
     let mut high_score: u32 = fs::read_to_string("highscore.dat")
         .map_or(Ok(0), |i| i.parse::<u32>())
@@ -131,7 +127,7 @@ async fn main() {
                 }
 
                 // generate a new square
-                let random_color = square_colors
+                let random_color = SQUARE_COLORS
                     .choose()
                     .copied()          // Convert &Color → Color
                     .unwrap_or(WHITE);
