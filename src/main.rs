@@ -1,18 +1,10 @@
-use macroquad::{prelude::*, rand::ChooseRandom};
-use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
+use macroquad::prelude::*;
+use macroquad_particles::{self as particles, AtlasConfig, EmissionShape, Emitter, EmitterConfig};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use std::fs;
 
 const MOVEMENT_SPEED: f32 = 200.0;
 const BACKGROUND_COLOR: Color = Color::from_hex(0x222244);
-const SQUARE_COLORS: [Color; 6] = [
-    RED,
-    GREEN,
-    BLUE,
-    YELLOW,
-    PURPLE,
-    ORANGE,
-];
 
 const FRAGMENT_SHADER: &str = include_str!("starfield-shader.glsl");
 const VERTEX_SHADER: &str = "#version 100
@@ -36,7 +28,6 @@ struct Shape {
     speed: f32,
     x: f32,
     y: f32,
-    color: Color,
     collided: bool,
 }
 
@@ -83,13 +74,12 @@ fn particle_explosion() -> particles::EmitterConfig {
 #[macroquad::main("GDRM")]
 async fn main() {
     rand::srand(miniquad::date::now() as u64);
-    let mut squares = vec![];
-    let mut circle = Shape {
+    let mut squares = vec![];   // enemies
+    let mut circle = Shape {    // player's ship
         size: 32.0,
         speed: MOVEMENT_SPEED,
         x: screen_width() / 2.0,
         y: screen_height() / 2.0,
-        color: WHITE,
         collided: false
     };
     let mut bullets: Vec<Shape> = vec![];
@@ -129,6 +119,10 @@ async fn main() {
         .await
         .expect("Couldn't load file");
     explosion_texture.set_filter(FilterMode::Nearest);
+    let enemy_small_texture: Texture2D = load_texture("enemy-small.png")
+        .await
+        .expect("Couldn't load file");
+    enemy_small_texture.set_filter(FilterMode::Nearest);
     build_textures_atlas();
 
     let mut bullet_sprite = AnimatedSprite::new(
@@ -175,6 +169,18 @@ async fn main() {
                 fps: 12,
             },
         ],
+        true,
+    );
+
+    let mut enemy_small_sprite = AnimatedSprite::new(
+        17,
+        16,
+        &[Animation {
+            name: "enemy_small".to_string(),
+            row: 0,
+            frames: 2,
+            fps: 12,
+        }],
         true,
     );
 
@@ -252,7 +258,6 @@ async fn main() {
                         y: circle.y - 24.0,
                         speed: circle.speed * 2.0,
                         size: 32.0,
-                        color: WHITE,
                         collided: false,
                     });
                 }
@@ -262,11 +267,7 @@ async fn main() {
                     game_state = GameState::Paused;
                 }
 
-                // generate a new square
-                let random_color = SQUARE_COLORS
-                    .choose()
-                    .copied()          // Convert &Color → Color
-                    .unwrap_or(WHITE);
+                // generate a new enemy
                 if rand::gen_range(0, 99) >= 95 {
                     let size = rand::gen_range(16.0, 64.0);
                     squares.push(Shape {
@@ -274,7 +275,6 @@ async fn main() {
                         speed: rand::gen_range(50.0, 150.0),
                         x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
                         y: -size,
-                        color: random_color,
                         collided: false,
                     });
                 }
@@ -292,6 +292,7 @@ async fn main() {
                 // update animations
                 ship_sprite.update();
                 bullet_sprite.update();
+                enemy_small_sprite.update();
 
                 // keep only visible squares and bullets
                 squares.retain(|square| square.y < screen_height() + square.size);
@@ -317,13 +318,18 @@ async fn main() {
                         ..Default::default()
                     },
                 );
+                let enemy_frame = enemy_small_sprite.frame();
                 for square in &squares {
-                    draw_rectangle(
+                    draw_texture_ex(
+                        &enemy_small_texture,
                         square.x - square.size / 2.0,
                         square.y - square.size / 2.0,
-                        square.size,
-                        square.size,
-                        square.color
+                        WHITE,
+                        DrawTextureParams {
+                            dest_size: Some(vec2(square.size, square.size)),
+                            source: Some(enemy_frame.source_rect),
+                            ..Default::default()
+                        },
                     );
                 }
                 let bullet_frame = bullet_sprite.frame();
@@ -375,7 +381,9 @@ async fn main() {
                             high_score = high_score.max(score);
                             explosions.push((
                                 Emitter::new(EmitterConfig {
-                                    amount: square.size.round() as u32,
+                                    amount: square.size.round() as u32 * 2,
+                                    emission_shape: EmissionShape::Sphere {radius: square.size * 0.7},
+                                    lifetime: square.size * 0.01,
                                     texture: Some(explosion_texture.clone()),
                                     ..particle_explosion()
                                 }),
