@@ -6,3 +6,4 @@ description = "A game from the Game Development in Rust using Macroquad book."
 
 [dependencies]
 macroquad = "0.4.14"
+macroquad-particles = "0.2.2"
