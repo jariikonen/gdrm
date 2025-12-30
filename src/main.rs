@@ -1,5 +1,5 @@
 use macroquad::{prelude::*, rand::ChooseRandom};
-use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
+use macroquad_particles::{self as particles, AtlasConfig, EmissionShape, Emitter, EmitterConfig};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use std::fs;
 
@@ -323,7 +323,9 @@ async fn main() {
                             high_score = high_score.max(score);
                             explosions.push((
                                 Emitter::new(EmitterConfig {
-                                    amount: square.size.round() as u32,
+                                    amount: square.size.round() as u32 * 2,
+                                    emission_shape: EmissionShape::Sphere {radius: square.size * 0.7},
+                                    lifetime: square.size * 0.01,
                                     texture: Some(explosion_texture.clone()),
                                     ..particle_explosion()
                                 }),
