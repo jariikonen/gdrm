@@ -152,7 +152,7 @@ async fn main() {
     );
     bullet_sprite.set_animation(1);
 
-        let mut ship_sprite = AnimatedSprite::new(
+    let mut ship_sprite = AnimatedSprite::new(
         16,
         24,
         &[
